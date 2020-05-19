@@ -189,8 +189,8 @@ class Person(object):
         
         Returns
         -------
-        CED : float
-            cumulative effective dose
+        dorg : float
+            organ dose
         """
         
         
