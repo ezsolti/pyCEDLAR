@@ -6,6 +6,7 @@ zs. elter 2020
 import numpy as np
 from constants import *  #TODO from pyLAR
 
+
 class Model(object):
     """
     collection of model parameters
@@ -92,12 +93,7 @@ class Person(object):
         self.Saliment = Saliment
         self.Sdecont = Sdecont
         self.age = age #todo test positive
-        if gender == 'female' or gender == 'Female' or gender == 'FEMALE':
-            self.gender = 'female'
-        elif gender == 'male' or gender == 'Male' or gender == 'MALE':
-            self.gender = 'male'
-        else:
-            raise TypeError("Gender is either 'female' or 'male'")
+        self.gender = genderTest(gender)
         
         if isinstance(model, Model):
             self.model = model
@@ -198,8 +194,8 @@ class Person(object):
         
         
 if __name__ == "__main__":
-    sari = Person(age=2,gender='female',Saliment=0)
-    print(sari.getCED(t0=0.0)) #163.689
+    sari = Person(age=2,gender='female',Saliment=1)
+    print(sari.getCED(t0=0.5,tacc=70)) #163.689
     print(sari.getCED(dt=1.0)) #213.808
 
         
