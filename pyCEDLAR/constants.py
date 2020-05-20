@@ -73,8 +73,9 @@ def getLAR(age,gender,organ):
          '16': {'male': [1180,653,498,394,313,199,174,142,101,58,24], 
                'female' : [1410,707,534,422,336,213,184,151,112,69,31]}
          }
-         
-    return np.interp(age,LARt,LAR[organ][gender])
+    #TODO is linear interpolation really good?   
+    #TODO is this /100000/0.1 correct?
+    return np.interp(age,LARt,LAR[organ][gender])/100000/0.1
 
 kSEQOrganExt={'1': {'male': 0.696, 'female': 0.720},
               '2': {'male': 0.824, 'female': 0.804},

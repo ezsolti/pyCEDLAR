@@ -219,11 +219,23 @@ class Person(object):
         calculate CUMLAR
         """
         #TODO, is this really a sum, or rather an integrate?
-        result1 = integrate.quad(lambda t: self.getDorg(t0=t0,tacc=tacc,organ=organ)* \
-                                 getLAR(self.age+t,self.gender,organ), t0, t0+tacc)
+        #result1 = integrate.quad(lambda t: self.getDorg(t0=t0,tacc=tacc,organ=organ)* \
+        #                         getLAR(self.age+t,self.gender,organ), t0, t0+tacc)
         #TODO this doesnt work yet!!! apparently getLAR messes up the integration.
         
-        return result1[0]
+        ts=np.linspace(t0,tacc,int((tacc-t0)/0.1)+1)
+        lar=np.array([getLAR(self.age+t,self.gender, organ) for t in ts])
+        #TODO is this the same as Årlig Dabs - Tot sum, column Y maybe?
+        dorg=np.array([self.getDorg(t0=t,tacc=tacc-t, organ=organ) for t in ts])
+        #TODO this one is really slow
+        #print(ts)
+        #print(lar)
+        #print(dorg)
+        
+        #TODO is this 1000 correct?
+        #TODO what is LAR(organ,ålder)??
+        #And this still should be multiplied with 100 to get percent?!
+        return np.sum(lar*dorg/1000)
     
         
         
