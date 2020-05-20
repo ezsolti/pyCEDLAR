@@ -4,6 +4,8 @@ zs. elter 2020
 """
 
 import numpy as np
+import scipy.integrate as integrate
+
 from constants import *  #TODO from pyLAR
 
 
@@ -124,6 +126,7 @@ class Person(object):
         else:
             return np.array(fsex)
     
+        
     def getCED(self, t0=0, tacc=70, dt=0.5):
         """
         Function calculates the cumulative effective dose t years after fallout
@@ -157,18 +160,17 @@ class Person(object):
 #        IntF2 = self.model.functc(t)*self.fsex(age)*(eCs137(age,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(age,self.gender)) #TODO give better name
 #        Int2 = np.trapz(IntF2, t)
         
-        import scipy.integrate as integrate
         #TODO integration goes now from t0 to tacc. shouldnt it go from t0 to t0+tacc?
         #result = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield)+C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(self.age+t,self.gender)), t0, tacc)
         result1 = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield), t0, t0+tacc)
-        result2 = integrate.quad(lambda t: C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(self.age+t,self.gender)), t0, t0+tacc)
+        result2 = integrate.quad(lambda t: C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), t0, t0+tacc)
 #        CED=C1*Int1 + C2*Int2
         
         #TODO, the integrate.quad makes dt obsolate!
         
         return result1[0]+result2[0]
     
-    def getDorg(self, t0=0, tacc=70,organ='1'):
+    def getDorg(self, t0=0, tacc=70,organ='14'):
         """
         Function calculates the the sum of the external and the internal contributions 
         to a specific organ dose.
@@ -189,6 +191,41 @@ class Person(object):
             organ dose
         """
         
+        C1 = self.Aloc*self.Sdecont*self.dCs*self.PhiKH*kSEQOrganExt[organ][self.gender]
+        C2 = self.Areg*self.Tagmax*self.Saliment
+#        
+#        IntF2 = self.model.functc(t)*self.fsex(age)*(eCs137(age,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(age,self.gender)) #TODO give better name
+#        Int2 = np.trapz(IntF2, t)
+        
+        #TODO integration goes now from t0 to tacc. shouldnt it go from t0 to t0+tacc?
+        #result = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield)+C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(self.age+t,self.gender)), t0, tacc)
+        result1 = integrate.quad(lambda t: \
+                C1*self.model.r(t)*kSEQK(self.age+t)*self.fsnow* \
+                (self.fout + (1-self.fout)*self.fshield), \
+                t0, t0+tacc)
+        result2 = integrate.quad(lambda t: \
+                C2*self.model.functc(t)*self.fsex(self.age+t)* \
+                (kOrganInt[organ]['Cs-137']*eCs137(self.age+t,self.gender)+ \
+                 kOrganInt[organ]['Cs-134']*self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), \
+                 t0, t0+tacc)
+#        CED=C1*Int1 + C2*Int2
+        
+        #TODO, the integrate.quad makes dt obsolate!
+        
+        return result1[0]+result2[0]
+    
+    def getCUMLAR(self,t0=0, tacc=70,organ='14'):
+        """
+        calculate CUMLAR
+        """
+        #TODO, is this really a sum, or rather an integrate?
+        result1 = integrate.quad(lambda t: self.getDorg(t0=t0,tacc=tacc,organ=organ)* \
+                                 getLAR(self.age+t,self.gender,organ), t0, t0+tacc)
+        #TODO this doesnt work yet!!! apparently getLAR messes up the integration.
+        
+        return result1[0]
+    
+        
         
         
         
@@ -197,6 +234,8 @@ if __name__ == "__main__":
     sari = Person(age=2,gender='female',Saliment=1)
     print(sari.getCED(t0=0.5,tacc=70)) #163.689
     print(sari.getCED(dt=1.0)) #213.808
+    print(sari.getDorg(organ='14'))
+    print(sari.getCUMLAR(organ='14'))
 
         
         
