@@ -173,7 +173,10 @@ class Person(object):
         return result1[0]+result2[0]
     
     def getDorgDot(self, t,organ='14'):
-        """function to serve for getCUMLAR"""
+        """function to serve for getCUMLAR
+        
+        this could be used both in getDorg for integration
+        and in getCUMLAR for convulution"""
         return dorg
     
     def getDorg(self, t0=0, tacc=70,organ='14'):
