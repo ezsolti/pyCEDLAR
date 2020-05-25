@@ -6,7 +6,7 @@ zs. elter 2020
 import numpy as np
 import scipy.integrate as integrate
 
-from constants import *  #TODO from pyLAR
+from constants import *  #TODO from pyCEDLAR
 
 
 class Model(object):
@@ -108,9 +108,7 @@ class Person(object):
     def fsex(self,age):
         """
         empirical factor accounting for lower observed radiocaesium concentraction
-        TODO: maybe part of person?
         TODO: in article it says some 0.81 mean was used what is that?
-        TODO, maybe age is not a property of the class?
         """
         fsex=[]
         if (not isinstance(age,list)) and (not isinstance(age,np.ndarray)):
@@ -161,6 +159,7 @@ class Person(object):
 #        Int2 = np.trapz(IntF2, t)
         
         #TODO integration goes now from t0 to tacc. shouldnt it go from t0 to t0+tacc?
+        #TODO resolved. it goes to t0+tacc now, is that correct?
         #result = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield)+C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(self.age+t,self.gender)), t0, tacc)
         result1 = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield), t0, t0+tacc)
         result2 = integrate.quad(lambda t: C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), t0, t0+tacc)
@@ -245,9 +244,9 @@ class Person(object):
 if __name__ == "__main__":
     sari = Person(age=2,gender='female',Saliment=1)
     print(sari.getCED(t0=0.5,tacc=70)) #163.689
-    print(sari.getCED(dt=1.0)) #213.808
+    print(sari.getCED()) #213.808
     print(sari.getDorg(organ='14'))
-    print(sari.getCUMLAR(organ='14'))
+    #print(sari.getCUMLAR(organ='14'))
 
         
         
