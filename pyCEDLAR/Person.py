@@ -43,7 +43,12 @@ class Model(object):
         self.r7=r7
         
     def r(self,t):
-        """r(t) function"""
+        """r(t) function
+        
+        Parameters
+        ----------
+        t : float or numpy.ndarray"""
+        
         return self.r0*np.exp(-self.r1*t) + self.r2*np.exp(-self.r3*t) + self.r4*np.exp(-self.r5*t) + self.r6*np.exp(-self.r7*t)
     
     def functc(self,t):
@@ -177,6 +182,17 @@ class Person(object):
         
         this could be used both in getDorg for integration
         and in getCUMLAR for convulution"""
+        
+        C1 = self.Aloc*self.Sdecont*self.dCs*self.PhiKH*kSEQOrganExt[organ][self.gender]
+        C2 = self.Areg*self.Tagmax*self.Saliment
+        
+        dorg=C1*self.model.r(t)*kSEQK(self.age+t)*self.fsnow* \
+                (self.fout + (1-self.fout)*self.fshield) \
+                + C2*self.model.functc(t)*self.fsex(self.age+t)* \
+                (kOrganInt[organ]['Cs-137']*eCs137(self.age+t,self.gender)+ \
+                 kOrganInt[organ]['Cs-134']*self.FR*CsRatio(t)*eCs134(self.age+t,self.gender))
+                
+        
         return dorg
     
     def getDorg(self, t0=0, tacc=70,organ='14'):
@@ -218,10 +234,11 @@ class Person(object):
                  kOrganInt[organ]['Cs-134']*self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), \
                  t0, t0+tacc)
 #        CED=C1*Int1 + C2*Int2
-        
+        #result=integrate.quad(lambda t: self.getDorgDot(t,organ=organ),t0,t0+tacc)
+        result=integrate.quad(self.getDorgDot,t0,t0+tacc,args=(organ))
         #TODO, the integrate.quad makes dt obsolate!
-        
-        return result1[0]+result2[0]
+        #TODO finally i use an outside function, this seems correct, get to clean up!
+        return result[0]#result1[0]+result2[0]
     
     def getCUMLAR(self,t0=0, tacc=70,organ='14'):
         """
@@ -233,10 +250,10 @@ class Person(object):
         #                         getLAR(self.age+t,self.gender,organ), t0, t0+tacc)
         #TODO this doesnt work yet!!! apparently getLAR messes up the integration.
         
-        ts=np.linspace(t0,tacc,int((tacc-t0)/0.1)+1)
-        lar=np.array([getLAR(self.age+t,self.gender, organ) for t in ts])
+        #ts=np.linspace(t0,tacc,int((tacc-t0)/0.1)+1)
+        #lar=np.array([getLAR(self.age+t,self.gender, organ) for t in ts])
         #TODO is this the same as Årlig Dabs - Tot sum, column Y maybe?
-        dorg=np.array([self.getDorg(t0=t,tacc=tacc-t, organ=organ) for t in ts])
+        #dorg=np.array([self.getDorg(t0=t,tacc=tacc-t, organ=organ) for t in ts])
         #TODO this one is really slow
         #print(ts)
         #print(lar)
@@ -245,7 +262,21 @@ class Person(object):
         #TODO is this 1000 correct?
         #TODO what is LAR(organ,ålder)??
         #And this still should be multiplied with 100 to get percent?!
-        return np.sum(lar*dorg/1000)
+        #return np.sum(lar*dorg/1000)
+        
+        result = integrate.quad(lambda t: self.getDorgDot(t,organ=organ) * \
+                                getLAR(self.age+t,self.gender,organ), t0, t0+tacc,full_output=1)
+        
+        #TODO: result looks right, though now i suppress a warning:
+        #Should we care about this? i dont think
+#        IntegrationWarning: The maximum number of subdivisions (50) has been achieved.
+#  If increasing the limit yields no improvement it is advised to analyze 
+#  the integrand in order to determine the difficulties.  If the position of a 
+#  local difficulty can be determined (singularity, discontinuity) one will 
+#  probably gain from splitting up the interval and calling the integrator 
+#  on the subranges.  Perhaps a special-purpose integrator should be used.
+#  getLar(self.age+t,self.gender,organ), t0, t0+tacc)
+        return result[0]/1000*100 #return percent
     
         
         
@@ -257,7 +288,7 @@ if __name__ == "__main__":
     print(sari.getCED(t0=0.5,tacc=70)) #163.689
     print(sari.getCED()) #213.808
     print(sari.getDorg(organ='14'))
-    #print(sari.getCUMLAR(organ='14'))
+    print(sari.getCUMLAR(organ='14'))
 
         
         

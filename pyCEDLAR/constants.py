@@ -173,11 +173,20 @@ def CsRatio(t):
 def kSEQK(age):
     """Age-dependent organ-specificabsorbeddoserateperunitkermarate,normalizedagainstthecorresponding valueforanadul
     """
-    if age<20: #TODO is that /1017 actually correct?
-        k=(0.0015*age**5 - 0.1214*age**4 + 3.473*age**3 - 40.28*age**2 + 136.3*age + 1233)/1017
+    k=[]
+    if (not isinstance(age,list)) and (not isinstance(age,np.ndarray)):
+            age=[age]
+    
+    for a in age:
+        if a<20: #TODO is that /1017 actually correct?
+            k.append((0.0015*a**5 - 0.1214*a**4 + 3.473*a**3 - 40.28*a**2 + 136.3*a + 1233)/1017)
+        else:
+            k.append(1.0)
+    
+    if len(k) == 1:
+        return k[0]
     else:
-        k=1.0
-    return k
+        return np.array(k)
 
 
 
