@@ -72,6 +72,9 @@ class Person(object):
     Areg : float
         lorumipsum
     TODO
+    TODO Sdecont should be a list of values, or some time dependent variable
+    TODO Saliment should be a list of values, or some time dependent variable
+    --- these are related to the protective measures
     TODO Tagmax may depend on being hunter or urban?
     TODO CEK is rather part of Model?
     TODO what is dCs in the excelsheet?
@@ -169,6 +172,10 @@ class Person(object):
         
         return result1[0]+result2[0]
     
+    def getDorgDot(self, t,organ='14'):
+        """function to serve for getCUMLAR"""
+        return dorg
+    
     def getDorg(self, t0=0, tacc=70,organ='14'):
         """
         Function calculates the the sum of the external and the internal contributions 
@@ -218,6 +225,7 @@ class Person(object):
         calculate CUMLAR
         """
         #TODO, is this really a sum, or rather an integrate?
+        #ANSWERED: it is an integrate, but not of an other integrate!
         #result1 = integrate.quad(lambda t: self.getDorg(t0=t0,tacc=tacc,organ=organ)* \
         #                         getLAR(self.age+t,self.gender,organ), t0, t0+tacc)
         #TODO this doesnt work yet!!! apparently getLAR messes up the integration.

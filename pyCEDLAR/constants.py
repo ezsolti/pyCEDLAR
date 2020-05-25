@@ -26,11 +26,11 @@ organnames={'1': 'bladder',
             '16': 'remainder'} #TODO check these
 
 #TODO check
-#TODO what is 'solid' in table
-#TODO why is in excel the whole body slightly different?
-#TODO prostate and testes used interchangably?
+#TODO what is 'solid' in table. solid vs leukemia cancer, does not cause issues here
+#TODO why is in excel the whole body slightly different? Because non-fatal skin is excluded.
+#TODO prostate and testes used interchangably? basically, yes
 #TODO, this needs to be nicer somehow
-#TODO, again, excel sheet has a 0.5 year shift!!
+#TODO, again, excel sheet has a 0.5 year shift!! that is a bug in the spreadsheet.
 def getLAR(age,gender,organ):
     """
     interpolates tabulated LAR values
