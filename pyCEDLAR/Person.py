@@ -100,9 +100,36 @@ class Person(object):
         self.CEK = CEK
         self.FR = FR
         self.Tagmax = Tagmax
-        self.Saliment = Saliment
-        self.Sdecont = Sdecont
         self.age = age #todo test positive
+
+        self.points=[t - self.age for t in LARt] #TODO check this is to make sure the breaks are at right place
+        if isinstance(Saliment,tuple) and len(Saliment)==2 and isinstance(Saliment[0], (int, float)) and isinstance(Saliment[1], (int, float)):
+            self.Saliment = Saliment
+        elif isinstance(Saliment,tuple) and len(Saliment)==2 and \
+                  all((isinstance(x, (int, float)) and x>=0) for x in Saliment[0]) and \
+                  all((isinstance(x, (int, float)) and x>=0 and x<=1) for x in Saliment[1]) and \
+                  all(i < j for i, j in zip(Saliment[0], Saliment[0][1:])):
+            self.Saliment = Saliment
+            self.points=np.append(self.points,Saliment[0])
+        elif isinstance(Saliment,(int,float)):
+            self.Saliment = Saliment
+        else:
+            raise ValueError('Saliment is either float or tuple of lists')
+
+        if isinstance(Sdecont,tuple) and len(Sdecont)==2 and isinstance(Sdecont[0], (int, float)) and isinstance(Sdecont[1], (int, float)):
+            self.Sdecont = Sdecont
+        elif isinstance(Sdecont,tuple) and len(Sdecont)==2 and \
+                  all((isinstance(x, (int, float)) and x>=0) for x in Sdecont[0]) and \
+                  all((isinstance(x, (int, float)) and x>=0 and x<=1) for x in Sdecont[1]) and \
+                  all(i < j for i, j in zip(Sdecont[0], Sdecont[0][1:])):
+            self.Sdecont = Sdecont
+            self.points=np.append(self.points,Sdecont[0])
+        elif isinstance(Sdecont,(int,float)):
+            self.Sdecont = Sdecont
+        else:
+            raise ValueError('Sdecont is either float or tuple of lists')
+            
+        self.points=np.unique(self.points)
         self.gender = genderTest(gender)
         
         if isinstance(model, Model):
@@ -112,6 +139,37 @@ class Person(object):
     
     def __repr__(self):
         return "%.1f old %s" % (self.age, self.gender)
+    
+    def Salimentf(self,t):
+        #TODO: what if self.Saliment[0][0] is not 0???
+        #consider it either being Saliment[1][0] ooor always 1?
+        if isinstance(self.Saliment,(int,float)):
+            return self.Saliment
+        else:
+            return step(t,self.Saliment[0],self.Saliment[1])
+    
+    def Sdecontf(self,t):
+        if isinstance(self.Sdecont,(int,float)):
+            return self.Sdecont
+        else:
+            return step(t,self.Sdecont[0],self.Sdecont[1])
+    
+#    def Salimentf(self, t):
+#        if isinstance(self.Saliment,(int,float)):
+#            if len(t)==1:
+#                return self.Saliment
+#            else:
+#                return self.Saliment*np.ones(len(t))
+#        elif isinstance(self.Saliment,tuple) and len(self.Saliment)==2 and len(self.Saliment[0]) == len(self.Saliment[1]):
+#            if all(isinstance(x, (int, float)) for x in self.Saliment[0]) and all(isinstance(x, (int, float)) for x in self.Saliment[1]):
+#                print('todo')getLAR(self.age+t,self.gender,organ)
+#                #Check that [0] is incremental
+#            
+#        else:
+#            raise TypeError('Saliment needs to be float or a tuple of 2 lists!')
+#            
+#            
+#        return self.Saliment
     
     def fsex(self,age):
         """
@@ -156,21 +214,20 @@ class Person(object):
 #        t = np.linspace(t0,t0+tacc,int(tacc/dt)+1) #TODO, check this int thing
 #        age = self.age + t
 #        
-        C1 = self.Aloc*self.Sdecont*self.dCs*self.PhiKH*self.CEK
+        C1 = self.Aloc*self.dCs*self.PhiKH*self.CEK
 #        IntF1 = self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield)
 #        Int1 = np.trapz(IntF1, t) #TODO does dt change anything?
 #        
 #        
-        C2 = self.Areg*self.Tagmax*self.Saliment
+        C2 = self.Areg*self.Tagmax
 #        
 #        IntF2 = self.model.functc(t)*self.fsex(age)*(eCs137(age,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(age,self.gender)) #TODO give better name
 #        Int2 = np.trapz(IntF2, t)
-        
         #TODO integration goes now from t0 to tacc. shouldnt it go from t0 to t0+tacc?
         #TODO resolved. it goes to t0+tacc now, is that correct?
         #result = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield)+C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(self.age+t,self.gender)), t0, tacc)
-        result1 = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield), t0, t0+tacc)
-        result2 = integrate.quad(lambda t: C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), t0, t0+tacc)
+        result1 = integrate.quad(lambda t: C1*self.Sdecontf(t)*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield), t0, t0+tacc,points=self.points)
+        result2 = integrate.quad(lambda t: C2*self.Salimentf(t)*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), t0, t0+tacc,points=self.points)
 #        CED=C1*Int1 + C2*Int2
         
         #TODO, the integrate.quad makes dt obsolate!
@@ -178,17 +235,23 @@ class Person(object):
         return result1[0]+result2[0]
     
     def getDorgDot(self, t,organ='14'):
-        """function to serve for getCUMLAR
+        """Function that calculates the external and internal contribution at a given time
+        to a specific organ dose
         
-        this could be used both in getDorg for integration
-        and in getCUMLAR for convulution"""
+        Parameters
+        ----------
+        t : float or ndarray
+            time or time vector
+        organ : str
+            the type of organ. Default '14', which is whole body
+        """
         
-        C1 = self.Aloc*self.Sdecont*self.dCs*self.PhiKH*kSEQOrganExt[organ][self.gender]
-        C2 = self.Areg*self.Tagmax*self.Saliment
+        C1 = self.Aloc*self.dCs*self.PhiKH*kSEQOrganExt[organ][self.gender]
+        C2 = self.Areg*self.Tagmax
         
-        dorg=C1*self.model.r(t)*kSEQK(self.age+t)*self.fsnow* \
+        dorg=C1*self.Sdecontf(t)*self.model.r(t)*kSEQK(self.age+t)*self.fsnow* \
                 (self.fout + (1-self.fout)*self.fshield) \
-                + C2*self.model.functc(t)*self.fsex(self.age+t)* \
+                + C2*self.Salimentf(t)*self.model.functc(t)*self.fsex(self.age+t)* \
                 (kOrganInt[organ]['Cs-137']*eCs137(self.age+t,self.gender)+ \
                  kOrganInt[organ]['Cs-134']*self.FR*CsRatio(t)*eCs134(self.age+t,self.gender))
                 
@@ -216,28 +279,28 @@ class Person(object):
             organ dose
         """
         
-        C1 = self.Aloc*self.Sdecont*self.dCs*self.PhiKH*kSEQOrganExt[organ][self.gender]
-        C2 = self.Areg*self.Tagmax*self.Saliment
+#        C1 = self.Aloc*self.dCs*self.PhiKH*kSEQOrganExt[organ][self.gender]
+#        C2 = self.Areg*self.Tagmax
 #        
 #        IntF2 = self.model.functc(t)*self.fsex(age)*(eCs137(age,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(age,self.gender)) #TODO give better name
 #        Int2 = np.trapz(IntF2, t)
         
         #TODO integration goes now from t0 to tacc. shouldnt it go from t0 to t0+tacc?
         #result = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield)+C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(self.age+t,self.gender)), t0, tacc)
-        result1 = integrate.quad(lambda t: \
-                C1*self.model.r(t)*kSEQK(self.age+t)*self.fsnow* \
-                (self.fout + (1-self.fout)*self.fshield), \
-                t0, t0+tacc)
-        result2 = integrate.quad(lambda t: \
-                C2*self.model.functc(t)*self.fsex(self.age+t)* \
-                (kOrganInt[organ]['Cs-137']*eCs137(self.age+t,self.gender)+ \
-                 kOrganInt[organ]['Cs-134']*self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), \
-                 t0, t0+tacc)
+#        result1 = integrate.quad(lambda t: \
+#                C1*self.Sdecontf(t)*self.model.r(t)*kSEQK(self.age+t)*self.fsnow* \
+#                (self.fout + (1-self.fout)*self.fshield), \
+#                t0, t0+tacc)
+#        result2 = integrate.quad(lambda t: \
+#                C2*self.Salimentf(t)*self.model.functc(t)*self.fsex(self.age+t)* \
+#                (kOrganInt[organ]['Cs-137']*eCs137(self.age+t,self.gender)+ \
+#                 kOrganInt[organ]['Cs-134']*self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), \
+#                 t0, t0+tacc)
 #        CED=C1*Int1 + C2*Int2
         #result=integrate.quad(lambda t: self.getDorgDot(t,organ=organ),t0,t0+tacc)
-        result=integrate.quad(self.getDorgDot,t0,t0+tacc,args=(organ))
+        result=integrate.quad(self.getDorgDot,t0,t0+tacc,args=(organ),points=self.points)
         #TODO, the integrate.quad makes dt obsolate!
-        #TODO finally i use an outside function, this seems correct, get to clean up!
+        #TODO finally i use an outside function, this seems correct, get to clean up all the unnecassary stuff
         return result[0]#result1[0]+result2[0]
     
     def getCUMLAR(self,t0=0, tacc=70,organ='14'):
@@ -263,11 +326,31 @@ class Person(object):
         #TODO what is LAR(organ,ålder)??
         #And this still should be multiplied with 100 to get percent?!
         #return np.sum(lar*dorg/1000)
-        
+        #TODO  np.where(np.array(LARt)>t0)
+        i0=np.where(np.array(LARt)-self.age>t0)[0][0]
+        iacc=np.where(np.array(LARt)-self.age<t0+tacc)[0][-1]
+        tb=np.append(np.append(t0,LARt[i0:iacc+1]),t0+tacc)#+self.age #TODO check
+        #THIS one is probably not good now, since I should consider that LARt is shifted
+        #actually it is being shifted! BUT STILL SOMETHING IS WRONG HERE Maybe LAR should be
+        #shifted and not the tb?
+        print(tb)
+        resus=0
+        print('-----')
+        for ti,tj in zip(tb, tb[1:]):
+            result = integrate.quad(lambda t: self.getDorgDot(t,organ=organ) * \
+                                getLAR(self.age+t,self.gender,organ), ti, tj,points=self.points)
+            print(result[0])
+            resus=resus+result[0]
+        print('-----')
+        print(resus)
+        print(resus/(len(tb)-1))
+        #TODO why are the sums of these integrates larger then the t0 - t0+tacc integrate?
+
         result = integrate.quad(lambda t: self.getDorgDot(t,organ=organ) * \
-                                getLAR(self.age+t,self.gender,organ), t0, t0+tacc,full_output=1)
+                                getLAR(self.age+t,self.gender,organ), t0, t0+tacc,points=self.points)
         
         #TODO: result looks right, though now i suppress a warning:
+        # I managed to resolve the warning with including points!
         #Should we care about this? i dont think
 #        IntegrationWarning: The maximum number of subdivisions (50) has been achieved.
 #  If increasing the limit yields no improvement it is advised to analyze 
@@ -284,8 +367,12 @@ class Person(object):
         
         
 if __name__ == "__main__":
-    sari = Person(age=2,gender='female',Saliment=1)
+    sari = Person(age=2,gender='female',Saliment=([0,5,10,20],[1,0.7,0.4,0.1]),
+                  Sdecont=([0,5,10,20],[1.0,0.9,0.8,0.7]))
+    #sari = Person(age=2,gender='female',Saliment=1)
+    #              Sdecont=([0,6,12,20],[0.1,0.2,0.4,1]))
     print(sari.getCED(t0=0.5,tacc=70)) #163.689
+    print(sari.getCED(t0=0.0,tacc=70)) #163.689
     print(sari.getCED()) #213.808
     print(sari.getDorg(organ='14'))
     print(sari.getCUMLAR(organ='14'))

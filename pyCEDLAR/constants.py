@@ -1,4 +1,5 @@
 """
+#TODO utf coding for ö 
 constants for pyLAR
 
 these may be modified, are not intended to be modified.
@@ -31,6 +32,7 @@ organnames={'1': 'bladder',
 #TODO prostate and testes used interchangably? basically, yes
 #TODO, this needs to be nicer somehow
 #TODO, again, excel sheet has a 0.5 year shift!! that is a bug in the spreadsheet.
+LARt=[0,5,10,15,20,30,40,50,60,70,80]
 def getLAR(age,gender,organ):
     """
     interpolates tabulated LAR values
@@ -54,7 +56,7 @@ def getLAR(age,gender,organ):
                'female' : [785,660,552,462,387,272,269,255,217,150,79]},
          '7': {'male': [193,142,112,97,89,78,79,83,88,87,64], 
                'female' : [173,117,88,75,69,60,61,63,65,63,47]},
-         '8': {'male': [1720,917,484,256,136,38,10,3,1,0,0], 
+         '8': {'male': [1720,917,484,256,136,38,10,3,1,0,0],  #TODO use 8->to15 keep same indexing
                'female' : [972,517,273,144,76,21,6,2,0,0,0]},
          '9': {'male': [198,172,148,127,110,82,83,80,61,30,9], 
                'female' : [0]*11},
@@ -226,3 +228,19 @@ def genderTest(gender):
         return 'male'
     else:
         raise TypeError("Gender is either 'female' or 'male'")
+        
+def step(t,a,b):
+    #TODO for t time vector as well
+    if (not isinstance(a,list)) and (not isinstance(a,np.ndarray)):
+            a=np.array([a])
+    else:
+        a=np.array(a)
+    
+            
+    if (not isinstance(b,list)) and (not isinstance(b,np.ndarray)):
+            b=np.array([b])
+    else:
+        b=np.array(b)
+    
+    return b[np.where(a<=t)[0][-1]]
+    
