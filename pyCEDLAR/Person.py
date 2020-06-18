@@ -1,4 +1,5 @@
-"""Person class described here
+"""
+Person() and Model() class
 
 zs. elter 2020
 """
@@ -14,20 +15,19 @@ class Model(object):
     collection of model parameters
     
     these are not necessarily intended to be modified, but can be
-    
-    TODO: pdf?
-    
+            
     TODO: eCs134 and eCs137 logically come here?
     
     TODO: t1 t2 t3 depends on urban or hunter! maybe that should be called here?
     """
     
-    def __init__(self,t1=1,t2=0.75,t3=15,
+    def __init__(self,dCs=0.636,t1=1,t2=0.75,t3=15,
                  c1=1,c2=0.1,
                  r0=0.96,r1=36.89025,
                  r2=0.1082,r3=2.447175,
                  r4=0.0796,r5=0.668408,
                  r6=0.0314,r7=0.125646):
+        self.dCs=dCs
         self.t1=t1
         self.t2=t2
         self.t3=t3
@@ -77,22 +77,18 @@ class Person(object):
     Areg : float
         lorumipsum
     TODO
-    TODO Sdecont should be a list of values, or some time dependent variable
-    TODO Saliment should be a list of values, or some time dependent variable
-    --- these are related to the protective measures
+    TODO model should be "Chernobyl" "Fukushima", or a userdefined Model() if elif elif isinstance, else warning
     TODO Tagmax may depend on being hunter or urban?
     TODO CEK is rather part of Model?
-    TODO what is dCs in the excelsheet?
     """
     
-    def __init__(self, Areg=1000, Aloc=1000, dCs=0.636,
+    def __init__(self, Areg=1000, Aloc=1000,
                  PhiKH=0.82,fshield=0.4,fout=0.2,fsnow=1,
                  CEK=0.73, FR=0.56,Tagmax=6.7,
                  Saliment=1,Sdecont=1, 
                  age=2, gender='female',model=Model()):
         self.Areg = Areg
         self.Aloc = Aloc
-        self.dCs = dCs
         self.PhiKH = PhiKH
         self.fshield = fshield
         self.fout = fout
@@ -100,15 +96,22 @@ class Person(object):
         self.CEK = CEK
         self.FR = FR
         self.Tagmax = Tagmax
-        self.age = age #todo test positive
+        if isinstance(age,(float,int)) and age>=0:
+            self.age = age #todo test positive
+        else:
+            raise ValueError('Age has to be a positive number')
 
         self.points=[t - self.age for t in LARt] #TODO check this is to make sure the breaks are at right place
         if isinstance(Saliment,tuple) and len(Saliment)==2 and isinstance(Saliment[0], (int, float)) and isinstance(Saliment[1], (int, float)):
             self.Saliment = Saliment
         elif isinstance(Saliment,tuple) and len(Saliment)==2 and \
+                  len(Saliment[0]) == len(Saliment[1]) and \
                   all((isinstance(x, (int, float)) and x>=0) for x in Saliment[0]) and \
                   all((isinstance(x, (int, float)) and x>=0 and x<=1) for x in Saliment[1]) and \
                   all(i < j for i, j in zip(Saliment[0], Saliment[0][1:])):
+            if Saliment[0][0]>0:
+                Saliment[0].insert(0,0)
+                Saliment[1].insert(0,Saliment[1][0])
             self.Saliment = Saliment
             self.points=np.append(self.points,Saliment[0])
         elif isinstance(Saliment,(int,float)):
@@ -119,9 +122,13 @@ class Person(object):
         if isinstance(Sdecont,tuple) and len(Sdecont)==2 and isinstance(Sdecont[0], (int, float)) and isinstance(Sdecont[1], (int, float)):
             self.Sdecont = Sdecont
         elif isinstance(Sdecont,tuple) and len(Sdecont)==2 and \
+                  len(Sdecont[0]) == len(Sdecont[1]) and \
                   all((isinstance(x, (int, float)) and x>=0) for x in Sdecont[0]) and \
                   all((isinstance(x, (int, float)) and x>=0 and x<=1) for x in Sdecont[1]) and \
                   all(i < j for i, j in zip(Sdecont[0], Sdecont[0][1:])):
+            if Sdecont[0][0]>0:
+                Sdecont[0].insert(0,0)
+                Sdecont[1].insert(0,Sdecont[1][0])
             self.Sdecont = Sdecont
             self.points=np.append(self.points,Sdecont[0])
         elif isinstance(Sdecont,(int,float)):
@@ -129,10 +136,20 @@ class Person(object):
         else:
             raise ValueError('Sdecont is either float or tuple of lists')
             
-        self.points=np.unique(self.points)
+        self.points=np.unique(self.points) #TODO maybe not here, or should be a _points
         self.gender = genderTest(gender)
         
-        if isinstance(model, Model):
+        if model == 'Chernobyl':
+            self.model=Model()
+#TODO figure out proper values here, and include Fukushima case
+#        elif model == 'Fukushima':
+#            self.model = Model(dCs=0.999,t1=1,t2=0.75,t3=15,
+#                 c1=1,c2=0.1,
+#                 r0=0.758,r1=36.89025,
+#                 r2=0.1082,r3=2.447175,
+#                 r4=0.0796,r5=0.668408,
+#                 r6=0.0314,r7=0.125646)
+        elif isinstance(model, Model):
             self.model = model
         else:
             raise TypeError('Model() is expected')
@@ -141,41 +158,53 @@ class Person(object):
         return "%.1f old %s" % (self.age, self.gender)
     
     def Salimentf(self,t):
-        #TODO: what if self.Saliment[0][0] is not 0???
-        #consider it either being Saliment[1][0] ooor always 1?
+        """
+        Time dependent function of a factor representing the relative decrease
+        in proportion to the standard radioecological transfer factor of foodstuffs
+        brought on by various counter measures.
+        
+        The function is a wrapper for :meth:`constants.step()`.
+        
+        Parameters
+        ----------
+        t : float
+            time when the Saliment factor is evaluated
+        """
         if isinstance(self.Saliment,(int,float)):
             return self.Saliment
         else:
             return step(t,self.Saliment[0],self.Saliment[1])
     
     def Sdecontf(self,t):
+        """
+        Time dependent function of the factor representing the ratio between the ambient
+        dose rate in the area after and before a decontamination procedure.
+        
+        The function is a wrapper for :meth:`constants.step()`.
+        
+        Parameters
+        ----------
+        t : float
+            time when the Saliment factor is evaluated
+        """
         if isinstance(self.Sdecont,(int,float)):
             return self.Sdecont
         else:
             return step(t,self.Sdecont[0],self.Sdecont[1])
     
-#    def Salimentf(self, t):
-#        if isinstance(self.Saliment,(int,float)):
-#            if len(t)==1:
-#                return self.Saliment
-#            else:
-#                return self.Saliment*np.ones(len(t))
-#        elif isinstance(self.Saliment,tuple) and len(self.Saliment)==2 and len(self.Saliment[0]) == len(self.Saliment[1]):
-#            if all(isinstance(x, (int, float)) for x in self.Saliment[0]) and all(isinstance(x, (int, float)) for x in self.Saliment[1]):
-#                print('todo')getLAR(self.age+t,self.gender,organ)
-#                #Check that [0] is incremental
-#            
-#        else:
-#            raise TypeError('Saliment needs to be float or a tuple of 2 lists!')
-#            
-#            
-#        return self.Saliment
     
     def fsex(self,age):
         """
-        empirical factor accounting for lower observed radiocaesium concentraction
-        TODO: in article it says some 0.81 mean was used what is that?
+        Empirical factor accounting for lower observed radiocaesium concentraction
+        per unit body mass in women compared with adult males
+        
+        Parameters
+        ----------
+        age : float or list
+            Age at which the fsex factor is evaluated.
+            
         """
+        #TODO: in article it says some 0.81 mean was used what is that?
         fsex=[]
         if (not isinstance(age,list)) and (not isinstance(age,np.ndarray)):
             age=[age]
@@ -191,10 +220,10 @@ class Person(object):
             return np.array(fsex)
     
         
-    def getCED(self, t0=0, tacc=70, dt=0.5):
+    def getCED(self, t0=0, tacc=70):
         """
-        Function calculates the cumulative effective dose t years after fallout
-        over a period of accummulation time tacc.
+        Function calculates the cumulative effective dose after fallout happenned 
+        at t0 over a period of accummulation time tacc.
         
         Parameters
         ----------
@@ -202,41 +231,24 @@ class Person(object):
             time after fallout. Default is 0 year.
         tacc : float
             accumulation time. Default is 50 years.
-        dt : float
-            time step for integration. Default is 0.5 years.
         
         Returns
         -------
         CED : float
             cumulative effective dose
         """
-        
-#        t = np.linspace(t0,t0+tacc,int(tacc/dt)+1) #TODO, check this int thing
-#        age = self.age + t
-#        
-        C1 = self.Aloc*self.dCs*self.PhiKH*self.CEK
-#        IntF1 = self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield)
-#        Int1 = np.trapz(IntF1, t) #TODO does dt change anything?
-#        
-#        
+                
+        C1 = self.Aloc*self.model.dCs*self.PhiKH*self.CEK
         C2 = self.Areg*self.Tagmax
-#        
-#        IntF2 = self.model.functc(t)*self.fsex(age)*(eCs137(age,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(age,self.gender)) #TODO give better name
-#        Int2 = np.trapz(IntF2, t)
-        #TODO integration goes now from t0 to tacc. shouldnt it go from t0 to t0+tacc?
-        #TODO resolved. it goes to t0+tacc now, is that correct?
-        #result = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield)+C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(self.age+t,self.gender)), t0, tacc)
+
         result1 = integrate.quad(lambda t: C1*self.Sdecontf(t)*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield), t0, t0+tacc,points=self.points)
         result2 = integrate.quad(lambda t: C2*self.Salimentf(t)*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), t0, t0+tacc,points=self.points)
-#        CED=C1*Int1 + C2*Int2
-        
-        #TODO, the integrate.quad makes dt obsolate!
         
         return result1[0]+result2[0]
     
     def getDorgDot(self, t,organ='14'):
         """Function that calculates the external and internal contribution at a given time
-        to a specific organ dose
+        to a specific organ dose rate
         
         Parameters
         ----------
@@ -244,19 +256,24 @@ class Person(object):
             time or time vector
         organ : str
             the type of organ. Default '14', which is whole body
+            
+        Returns
+        -------
+        dorgDot : float
+            External and internal contribution at a given time to a specific organ dose rate
         """
         
-        C1 = self.Aloc*self.dCs*self.PhiKH*kSEQOrganExt[organ][self.gender]
+        C1 = self.Aloc*self.model.dCs*self.PhiKH*kSEQOrganExt[organ][self.gender]
         C2 = self.Areg*self.Tagmax
         
-        dorg=C1*self.Sdecontf(t)*self.model.r(t)*kSEQK(self.age+t)*self.fsnow* \
+        dorgDot=C1*self.Sdecontf(t)*self.model.r(t)*kSEQK(self.age+t)*self.fsnow* \
                 (self.fout + (1-self.fout)*self.fshield) \
                 + C2*self.Salimentf(t)*self.model.functc(t)*self.fsex(self.age+t)* \
                 (kOrganInt[organ]['Cs-137']*eCs137(self.age+t,self.gender)+ \
                  kOrganInt[organ]['Cs-134']*self.FR*CsRatio(t)*eCs134(self.age+t,self.gender))
                 
         
-        return dorg
+        return dorgDot
     
     def getDorg(self, t0=0, tacc=70,organ='14'):
         """
@@ -278,88 +295,35 @@ class Person(object):
         dorg : float
             organ dose
         """
-        
-#        C1 = self.Aloc*self.dCs*self.PhiKH*kSEQOrganExt[organ][self.gender]
-#        C2 = self.Areg*self.Tagmax
-#        
-#        IntF2 = self.model.functc(t)*self.fsex(age)*(eCs137(age,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(age,self.gender)) #TODO give better name
-#        Int2 = np.trapz(IntF2, t)
-        
-        #TODO integration goes now from t0 to tacc. shouldnt it go from t0 to t0+tacc?
-        #result = integrate.quad(lambda t: C1*self.model.r(t)*self.fsnow*(self.fout + (1-self.fout)*self.fshield)+C2*self.model.functc(t)*self.fsex(self.age+t)*(eCs137(self.age+t,self.gender)+self.FR*np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)*eCs134(self.age+t,self.gender)), t0, tacc)
-#        result1 = integrate.quad(lambda t: \
-#                C1*self.Sdecontf(t)*self.model.r(t)*kSEQK(self.age+t)*self.fsnow* \
-#                (self.fout + (1-self.fout)*self.fshield), \
-#                t0, t0+tacc)
-#        result2 = integrate.quad(lambda t: \
-#                C2*self.Salimentf(t)*self.model.functc(t)*self.fsex(self.age+t)* \
-#                (kOrganInt[organ]['Cs-137']*eCs137(self.age+t,self.gender)+ \
-#                 kOrganInt[organ]['Cs-134']*self.FR*CsRatio(t)*eCs134(self.age+t,self.gender)), \
-#                 t0, t0+tacc)
-#        CED=C1*Int1 + C2*Int2
-        #result=integrate.quad(lambda t: self.getDorgDot(t,organ=organ),t0,t0+tacc)
+
         result=integrate.quad(self.getDorgDot,t0,t0+tacc,args=(organ),points=self.points)
-        #TODO, the integrate.quad makes dt obsolate!
-        #TODO finally i use an outside function, this seems correct, get to clean up all the unnecassary stuff
-        return result[0]#result1[0]+result2[0]
+        dorg = result[0]
+        return dorg
     
     def getCUMLAR(self,t0=0, tacc=70,organ='14'):
         """
-        calculate CUMLAR
+        Function to evaluate CUMLAR, the cumulative life-time attributable risk of cancer
+        in a certain organ.
+        
+        Parameters
+        ----------
+        t0 : float
+            time after fallout. Default is 0 year.
+        tacc : float
+            accumulation time. Default is 50 years.
+        organ : str
+            type of organ. 
+        
+        
+        Returns
+        -------
+        cumlar : float
+            Cumulative life-time attributable risk of cancer in percantage. 
         """
-        #TODO, is this really a sum, or rather an integrate?
-        #ANSWERED: it is an integrate, but not of an other integrate!
-        #result1 = integrate.quad(lambda t: self.getDorg(t0=t0,tacc=tacc,organ=organ)* \
-        #                         getLAR(self.age+t,self.gender,organ), t0, t0+tacc)
-        #TODO this doesnt work yet!!! apparently getLAR messes up the integration.
-        
-        #ts=np.linspace(t0,tacc,int((tacc-t0)/0.1)+1)
-        #lar=np.array([getLAR(self.age+t,self.gender, organ) for t in ts])
-        #TODO is this the same as Årlig Dabs - Tot sum, column Y maybe?
-        #dorg=np.array([self.getDorg(t0=t,tacc=tacc-t, organ=organ) for t in ts])
-        #TODO this one is really slow
-        #print(ts)
-        #print(lar)
-        #print(dorg)
-        
-        #TODO is this 1000 correct?
-        #TODO what is LAR(organ,ålder)??
-        #And this still should be multiplied with 100 to get percent?!
-        #return np.sum(lar*dorg/1000)
-        #TODO  np.where(np.array(LARt)>t0)
-        i0=np.where(np.array(LARt)-self.age>t0)[0][0]
-        iacc=np.where(np.array(LARt)-self.age<t0+tacc)[0][-1]
-        tb=np.append(np.append(t0,LARt[i0:iacc+1]),t0+tacc)#+self.age #TODO check
-        #THIS one is probably not good now, since I should consider that LARt is shifted
-        #actually it is being shifted! BUT STILL SOMETHING IS WRONG HERE Maybe LAR should be
-        #shifted and not the tb?
-        print(tb)
-        resus=0
-        print('-----')
-        for ti,tj in zip(tb, tb[1:]):
-            result = integrate.quad(lambda t: self.getDorgDot(t,organ=organ) * \
-                                getLAR(self.age+t,self.gender,organ), ti, tj,points=self.points)
-            print(result[0])
-            resus=resus+result[0]
-        print('-----')
-        print(resus)
-        print(resus/(len(tb)-1))
-        #TODO why are the sums of these integrates larger then the t0 - t0+tacc integrate?
-
         result = integrate.quad(lambda t: self.getDorgDot(t,organ=organ) * \
                                 getLAR(self.age+t,self.gender,organ), t0, t0+tacc,points=self.points)
-        
-        #TODO: result looks right, though now i suppress a warning:
-        # I managed to resolve the warning with including points!
-        #Should we care about this? i dont think
-#        IntegrationWarning: The maximum number of subdivisions (50) has been achieved.
-#  If increasing the limit yields no improvement it is advised to analyze 
-#  the integrand in order to determine the difficulties.  If the position of a 
-#  local difficulty can be determined (singularity, discontinuity) one will 
-#  probably gain from splitting up the interval and calling the integrator 
-#  on the subranges.  Perhaps a special-purpose integrator should be used.
-#  getLar(self.age+t,self.gender,organ), t0, t0+tacc)
-        return result[0]/1000*100 #return percent
+        cumlar = result[0]/1000*100
+        return cumlar
     
         
         
@@ -367,7 +331,7 @@ class Person(object):
         
         
 if __name__ == "__main__":
-    sari = Person(age=2,gender='female',Saliment=([0,5,10,20],[1,0.7,0.4,0.1]),
+    sari = Person(age=2,gender='female',Saliment=([0,5,10,20],[0.7,0.7,0.4,0.1]),
                   Sdecont=([0,5,10,20],[1.0,0.9,0.8,0.7]))
     #sari = Person(age=2,gender='female',Saliment=1)
     #              Sdecont=([0,6,12,20],[0.1,0.2,0.4,1]))
