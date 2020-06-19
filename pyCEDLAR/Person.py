@@ -142,14 +142,13 @@ class Person(object):
         
         if model == 'Chernobyl':
             self.model=Model()
-#TODO figure out proper values here, and include Fukushima case
-#        elif model == 'Fukushima':
-#            self.model = Model(dCs=0.999,t1=1,t2=0.75,t3=15,
-#                 c1=1,c2=0.1,
-#                 r0=0.758,r1=36.89025,
-#                 r2=0.1082,r3=2.447175,
-#                 r4=0.0796,r5=0.668408,
-#                 r6=0.0314,r7=0.125646)
+        elif model == 'Fukushima':
+            self.model = Model(dCs=0.999,t1=1,t2=0.75,t3=15,
+                 c1=1,c2=0.1,
+                 r0=0.758,r1=35.977125,
+                 r2=0.205,r3=10.15395,
+                 r4=0.0373,r5=0.2154975,
+                 r6=0,r7=0)
         elif isinstance(model, Model):
             self.model = model
         else:
@@ -333,7 +332,7 @@ class Person(object):
         
 if __name__ == "__main__":
     sari = Person(age=2,gender='female',Saliment=([0,5,10,20],[0.7,0.7,0.4,0.1]),
-                  Sdecont=([0,5,10,20],[1.0,0.9,0.8,0.7]))
+                  Sdecont=([0,5,10,20],[1.0,0.9,0.8,0.7]),model='Fukushima')
     #sari = Person(age=2,gender='female',Saliment=1)
     #              Sdecont=([0,6,12,20],[0.1,0.2,0.4,1]))
     print(sari.getCED(t0=0.5,tacc=70)) #163.689
