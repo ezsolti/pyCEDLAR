@@ -70,6 +70,7 @@ class Person(object):
         lorumipsum
     Areg : float
         lorumipsum
+        
     Attributes
     ----------
     Aloc : float

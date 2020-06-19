@@ -75,7 +75,6 @@ def getLAR(age,gender,organ):
          '16': {'male': [1180,653,498,394,313,199,174,142,101,58,24], 
                'female' : [1410,707,534,422,336,213,184,151,112,69,31]}
          }
-    #TODO is linear interpolation really good?   
     #TODO is this /100000/0.1 correct?
     return np.interp(age,LARt,LAR[organ][gender])/100000/0.1
 
@@ -173,7 +172,13 @@ def CsRatio(t):
     return np.exp(((np.log(2)/T12Cs137)-(np.log(2)/T12Cs134))*t)
 
 def kSEQK(age):
-    """Age-dependent organ-specificabsorbeddoserateperunitkermarate,normalizedagainstthecorresponding valueforanadul
+    """Age-dependent organ-specific absorbed dose rate per unit kerma rate,
+    normalized against the corresponding value for an adult
+    
+    Parameters
+    ----------
+    age: float or list
+        Age(s) when kSEQK is evaluated.
     """
     k=[]
     if (not isinstance(age,list)) and (not isinstance(age,np.ndarray)):
@@ -181,8 +186,9 @@ def kSEQK(age):
     
     for a in age:
         if a<20: #TODO is that /1017 actually correct?
-            k.append((0.0015*a**5 - 0.1214*a**4 + 3.473*a**3 - 40.28*a**2 + 136.3*a + 1233)/1017)
-            #TODO k.append((0.00124*a**4 - 0.5364*a**3 + 7.4882*a**2 – 44.88*a*1 + 136.3*a + 1209.8)/1000)
+            k.append((0.0124*a**4-0.5364*a**3+7.4882*a**2-44.888*a+1209.8)/1000)
+            #k.append((0.0015*a**5 - 0.1214*a**4 + 3.473*a**3 - 40.28*a**2 + 136.3*a + 1233)/1017)
+        
         else:
             k.append(1.0)
     
@@ -211,7 +217,7 @@ def weightFunc(age,gender):
             else:
                 weight.append(63.0)
         else:
-            if a<20: #=IF(D8=1,(-0.0021*B8^6+0.2623*B8^5-11.799*B8^4+230.5*B8^3-1875.9*B8^2+8076.6*B8+3887.2)/1000,78)
+            if a<20:
                 weight.append((-0.0021*a**6+0.2623*a**5-11.799*a**4+230.5*a**3-1875.9*a**2+8076.6*a+3887.2)/1000)
             else:
                 weight.append(78.0)
@@ -221,7 +227,6 @@ def weightFunc(age,gender):
         return np.array(weight)
     
     
-#TODO: 'F'and 'M' and 0/1
 def genderTest(gender):
     if gender == 'female' or gender == 'Female' or gender == 'FEMALE':
         return 'female'
@@ -231,7 +236,18 @@ def genderTest(gender):
         raise TypeError("Gender is either 'female' or 'male'")
         
 def step(t,a,b):
-    #TODO for t time vector as well
+    """
+    Defines a function in time with multiple steps. 
+    
+    Parameters
+    ----------
+    t : float
+        time at which the step function is evaluated
+    a : list
+        Moments in time when the function changes.
+    b : list
+        Values to which the function changes at certain time moments.
+    """
     if (not isinstance(a,list)) and (not isinstance(a,np.ndarray)):
             a=np.array([a])
     else:
